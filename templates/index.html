@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Fuentes de Alimentación</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .card {
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .loading {
+            display: none;
+        }
+        .power-icon {
+            color: #0d6efd;
+            font-size: 2rem;
+        }
+        .param-section {
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .resultado-item {
+            border-left: 4px solid #0d6efd;
+        }
+        .battery-small {
+            border-left: 4px solid #198754;
+            padding-left: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .voltage-badge {
+            background-color: #6c757d;
+            color: white;
+            font-size: 0.75rem;
+        }
+        .app-badge {
+            background-color: #198754;
+            color: white;
+            font-size: 0.7rem;
+        }
+        .section-divider {
+            border-top: 3px solid #dee2e6;
+            margin: 3rem 0;
+            padding-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1 class="display-4">
+                    <i class="fa-sharp fa-solid fa-plug" style="color: #0085eb;"></i>
+                    Calculadora de Fuentes
+                </h1>
+                <p class="lead">Encuentra la fuente de alimentación perfecta para tu proyecto</p>
+            </div>
+        </div>
+
+        <!-- Formulario de Búsqueda de Fuentes -->
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-search me-2"></i>
+                            Parámetros de Búsqueda de Fuentes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="formBusqueda">
+                            <!--Tipo de Entrada/Salida -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="tipo_entrada_salida" class="form-label">
+                                        <i class="fas fa-exchange-alt me-1"></i>
+                                        Tipo de Entrada/Salida
+                                    </label>
+                                    <select class="form-select" id="tipo_entrada_salida" name="tipo_entrada_salida" required>
+                                        <option value="">Seleccione tipo...</option>
+                                        <option value="AC-DC">AC-DC (Convertidor)</option>
+                                        <option value="DC-AC">DC-AC (Inversor)</option>
+                                        <option value="DC-DC">DC-DC (Convertidor)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="aplicacion" class="form-label">
+                                        <i class="fas fa-tools me-1"></i>
+                                        Aplicación / Uso
+                                    </label>
+                                    <select class="form-select" id="aplicacion" name="aplicacion">
+                                        <option value="">Cualquier aplicación</option>
+                                    </select>
+                                    <small class="text-muted">Las aplicaciones se filtran según el tipo seleccionado</small>
+                                </div>
+                            </div>
+
+                            <!-- Sección AC-DC (Salida Variable) -->
+                            <div id="seccionACDC" class="param-section" style="display: none;">
+                                <h6>
+                                    <i class="fas fa-sliders-h me-2"></i>
+                                    Configuración AC-DC
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="salida_variable" class="form-label">Tipo de Salida</label>
+                                        <select class="form-select" id="salida_variable" name="salida_variable">
+                                            <option value="">No especificado</option>
+                                            <option value="si">Salida Variable</option>
+                                            <option value="no">Salida Fija</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Parámetros Numéricos -->
+                            <div class="param-section">
+                                <h6>
+                                    Especificaciones Técnicas (al menos una requerida)
+                                </h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="voltaje" class="form-label">
+                                            <i class="fas fa-bolt me-1"></i>
+                                            Voltaje (V)
+                                        </label>
+                                        <input type="number" class="form-control" id="voltaje" name="voltaje" 
+                                               placeholder="Ej: 12, 24, 48" step="0.1" min="0">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="corriente" class="form-label">
+                                            <i class="fas fa-tachometer-alt me-1"></i>
+                                            Corriente (A)
+                                        </label>
+                                        <input type="number" class="form-control" id="corriente" name="corriente" 
+                                               placeholder="Ej: 2, 5, 10" step="0.1" min="0">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="potencia" class="form-label">
+                                            <i class="fas fa-power-off me-1"></i>
+                                            Potencia (W)
+                                        </label>
+                                        <input type="number" class="form-control" id="potencia" name="potencia" 
+                                               placeholder="Ej: 100, 500, 1000" step="1" min="0">
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Ingrese al menos un parámetro numérico. El sistema calculará automáticamente los valores faltantes.
+                                </small>
+                            </div>
+
+                            <!-- Horas de Autonomía (solo DC-AC) -->
+                            <div id="seccionHoras" class="param-section" style="display:none;">
+                                <h6><i class="fas fa-clock me-2"></i>Autonomía para Inversores (DC-AC)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="horas_autonomia" class="form-label">Horas de Autonomía</label>
+                                        <input type="number" class="form-control" id="horas_autonomia" name="horas_autonomia"
+                                               placeholder="Ej: 2" min="0.5" step="0.5" value="2">
+                                        <small class="text-muted d-block">Solo aplicable si busca inversores (DC-AC)</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="row mt-4">
+                                <div class="col-12 d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">
+                                        <i class="fas fa-search me-2"></i>
+                                        Buscar Fuentes
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="limpiarFormulario()">
+                                        <i class="fas fa-eraser me-2"></i>
+                                        Limpiar
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Fuentes -->
+        <div id="loading" class="loading text-center my-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Buscando fuentes...</span>
+            </div>
+            <p class="mt-2">Buscando en el catálogo...</p>
+        </div>
+
+        <!-- Resultados Fuentes -->
+        <div id="resultados" class="row mt-4">
+            <!-- Los resultados se insertan aquí dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script personalizado -->
+    <script>
+        // Cargar datos al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarAplicaciones(); // Cargar todas las aplicaciones al inicio
+            configurarEventos();
+        });
+
+        // Configurar eventos
+        function configurarEventos() {
+            // Mostrar/ocultar sección AC-DC y cargar aplicaciones filtradas
+            document.getElementById('tipo_entrada_salida').addEventListener('change', function() {
+                const seccionACDC = document.getElementById('seccionACDC');
+                const seccionHoras = document.getElementById('seccionHoras');
+                const tipoSeleccionado = this.value;
+                
+                if (tipoSeleccionado === 'AC-DC') {
+                    seccionACDC.style.display = 'block';
+                    seccionHoras.style.display = 'none';
+                } else if (tipoSeleccionado === 'DC-AC') {
+                    seccionACDC.style.display = 'none';
+                    document.getElementById('salida_variable').value = '';
+                    seccionHoras.style.display = 'block';
+                } else {
+                    seccionACDC.style.display = 'none';
+                    document.getElementById('salida_variable').value = '';
+                    seccionHoras.style.display = 'none';
+                }
+                
+                if (tipoSeleccionado) {
+                    cargarAplicacionesPorTipo(tipoSeleccionado);
+                } else {
+                    cargarAplicaciones();
+                }
+            });
+
+            // Escuchar cambios en salida variable para AC-DC
+            document.getElementById('salida_variable').addEventListener('change', function() {
+                const tipoSeleccionado = document.getElementById('tipo_entrada_salida').value;
+                if (tipoSeleccionado === 'AC-DC') {
+                    cargarAplicacionesPorTipo(tipoSeleccionado);
+                }
+            });
+
+        }
+
+        // Actualizar contador de aplicaciones
+        function actualizarContadorAplicaciones(cantidad) {
+            const contador = document.getElementById('contadorAplicaciones');
+            if (contador) {
+                contador.textContent = cantidad;
+                if (cantidad > 0) {
+                    contador.className = 'badge bg-success ms-1';
+                } else {
+                    contador.className = 'badge bg-secondary ms-1';
+                }
+            }
+        }
+
+        // Cargar aplicaciones filtradas por tipo de fuente
+        async function cargarAplicacionesPorTipo(tipoFuente) {
+            try {
+                const salidaVariable = document.getElementById('salida_variable').value;
+                let url = `/aplicaciones/${tipoFuente}`;
+                
+                // Agregar parámetro de salida variable si está disponible
+                if (salidaVariable) {
+                    url += `?salida_variable=${salidaVariable}`;
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const select = document.getElementById('aplicacion');
+                select.innerHTML = '<option value="">Cualquier aplicación</option>';
+                
+                if (data.success && data.aplicaciones.length > 0) {
+                    data.aplicaciones.forEach(app => {
+                        const option = document.createElement('option');
+                        option.value = app;
+                        option.textContent = app;
+                        select.appendChild(option);
+                    });
+                    actualizarContadorAplicaciones(data.aplicaciones.length);
+                } else {
+                    actualizarContadorAplicaciones(0);
+                }
+            } catch (error) {
+                actualizarContadorAplicaciones(0);
+                console.error('Error cargando aplicaciones:', error);
+            }
+        }
+
+        // Cargar TODAS las aplicaciones (sin filtro)
+        async function cargarAplicaciones() {
+            try {
+                const response = await fetch('/aplicaciones');
+                const data = await response.json();
+                
+                const select = document.getElementById('aplicacion');
+                select.innerHTML = '<option value="">Cualquier aplicación</option>';
+                
+                if (data.success) {
+                    data.aplicaciones.forEach(app => {
+                        const option = document.createElement('option');
+                        option.value = app;
+                        option.textContent = app;
+                        select.appendChild(option);
+                    });
+                    actualizarContadorAplicaciones(data.aplicaciones.length);
+                }
+            } catch (error) {
+                actualizarContadorAplicaciones(0);
+            }
+        }
+
+        // Cálculo automático entre parámetros - VERSIÓN CORREGIDA
+        function calcularAutomatico(event) {
+            // Pequeña pausa para asegurar que los valores se han actualizado
+            setTimeout(() => {
+                const voltaje = parseFloat(document.getElementById('voltaje').value) || 0;
+                const corriente = parseFloat(document.getElementById('corriente').value) || 0;
+                const potencia = parseFloat(document.getElementById('potencia').value) || 0;
+                
+                console.log(`Valores: V=${voltaje}, A=${corriente}, W=${potencia}`); // Para debug
+
+                // Solo calcular si hay exactamente 2 parámetros llenos y el tercero vacío
+                const parametrosLlenos = [voltaje, corriente, potencia].filter(val => val > 0).length;
+                const potenciaVacia = document.getElementById('potencia').value === '';
+                const corrienteVacia = document.getElementById('corriente').value === '';
+                const voltajeVacio = document.getElementById('voltaje').value === '';
+
+                if (parametrosLlenos === 2) {
+                    // Caso 1: Voltaje y Corriente llenos, Potencia vacía
+                    if (voltaje > 0 && corriente > 0 && potenciaVacia) {
+                        const potenciaCalculada = voltaje * corriente;
+                        document.getElementById('potencia').value = potenciaCalculada.toFixed(2);
+                        console.log(`Cálculo: ${voltaje}V × ${corriente}A = ${potenciaCalculada}W`);
+                    }
+                    // Caso 2: Potencia y Voltaje llenos, Corriente vacía
+                    else if (potencia > 0 && voltaje > 0 && corrienteVacia && voltaje !== 0) {
+                        const corrienteCalculada = potencia / voltaje;
+                        document.getElementById('corriente').value = corrienteCalculada.toFixed(2);
+                        console.log(`Cálculo: ${potencia}W ÷ ${voltaje}V = ${corrienteCalculada}A`);
+                    }
+                    // Caso 3: Potencia y Corriente llenos, Voltaje vacío
+                    else if (potencia > 0 && corriente > 0 && voltajeVacio && corriente !== 0) {
+                        const voltajeCalculado = potencia / corriente;
+                        document.getElementById('voltaje').value = voltajeCalculado.toFixed(2);
+                        console.log(`Cálculo: ${potencia}W ÷ ${corriente}A = ${voltajeCalculado}V`);
+                    }
+                }
+            }, 100);
+        }
+
+        // Manejar búsqueda de fuentes
+        document.getElementById('formBusqueda').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            // Validación básica
+            if (!data.tipo_entrada_salida) {
+                alert('Por favor seleccione el tipo de entrada/salida');
+                return;
+            }
+
+            if (data.voltaje === '' && data.corriente === '' && data.potencia === '') {
+                alert('Por favor ingrese al menos un parámetro numérico (voltaje, corriente o potencia)');
+                return;
+            }
+
+            // Mostrar loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('resultados').innerHTML = '';
+            
+            try {
+                const response = await fetch('/buscar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                mostrarResultados(result);
+                
+            } catch (error) {
+                console.error('Error en la búsqueda:', error);
+                mostrarError('Error al realizar la búsqueda');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        // Mostrar resultados de fuentes
+        function mostrarResultados(result) {
+            const resultadosDiv = document.getElementById('resultados');
+            
+            if (!result.success) {
+                resultadosDiv.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${result.error}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (result.total === 0) {
+                resultadosDiv.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-search me-2"></i>
+                            No se encontraron fuentes que coincidan con los criterios especificados.
+                            <br><small class="mt-1 d-block">Intente ampliar los criterios de búsqueda o verificar los valores ingresados.</small>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4>
+                            <i class="fas fa-list me-2"></i>
+                            Resultados (${result.total} fuentes encontradas)
+                        </h4>
+                    </div>
+                </div>
+            `;
+            
+            result.resultados.forEach((fuente, index) => {
+                html += `
+                    <div class="col-lg-6 col-xl-4">
+                        <div class="card resultado-item h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fa-solid fa-plug-circle-bolt"></i>
+                                    ${fuente.modelo}
+                                </h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${fuente.tipo_entrada_salida}</h6>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-12 mb-2">
+                                        <small class="text-muted">Voltaje:</small>
+                                        <p class="mb-1"><strong>${fuente.voltaje}</strong></p>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Corriente</small>
+                                        <p class="mb-1"><strong>${fuente.corriente}${typeof fuente.corriente === 'number' ? 'A' : ''}</strong></p>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Potencia</small>
+                                        <p class="mb-1"><strong>${fuente.potencia}${typeof fuente.potencia === 'number' ? 'W' : ''}</strong></p>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <small class="text-muted">Aplicaciones:</small>
+                                    <p class="small mb-0">${fuente.aplicaciones}</p>
+                                </div>
+
+                                <!-- Baterías sugeridas (si existen) -->
+                                ${fuente.baterias && fuente.baterias.length > 0 ? `
+                                    <div class="mt-3">
+                                        <small class="text-muted">Baterías sugeridas (para ${result.horas_autonomia || '—'} h):</small>
+                                        <div class="mt-2">
+                                            ${fuente.baterias.map(b => `
+                                                <div class="battery-small">
+                                                    <strong>${b.modelo}</strong> — ${b.tipo} — ${b.voltaje}V — ${b.corriente_ah}Ah
+                                                    <br><small class="text-muted">Capacidad: ${b.capacidad_wh}Wh | Autonomía: <strong>${b.autonomia_horas} h</strong></small>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                <!-- Arreglos de baterías (si existen) -->
+                                ${fuente.arreglos_baterias && fuente.arreglos_baterias.length > 0 ? `
+                                    <div class="mt-3">
+                                        <small class="text-muted">Arreglos de baterías:</small>
+                                        <div class="mt-2">
+                                            ${fuente.arreglos_baterias.map(arr => `
+                                                ${arr.total_baterias > 0 ? `
+                                                    <div class="battery-small" style="border-left-color: #ffc107;">
+                                                        <strong>${arr.modelo}</strong> — ${arr.tipo} — ${arr.voltaje_bateria}V — ${arr.capacidad_ah}Ah
+                                                        <br><small class="text-muted">
+                                                            Arreglo: ${arr.baterias_serie}S × ${arr.conjuntos_paralelo}P 
+                                                            | Total: ${arr.total_baterias} baterías
+                                                            | Voltaje: ${arr.voltaje_sistema}V
+                                                            | Autonomía: <strong>${arr.autonomia_horas} h</strong>
+                                                        </small>
+                                                    </div>
+                                                ` : `
+                                                    <div class="battery-small" style="border-left-color: #6c757d;">
+                                                        <small class="text-muted">${arr.tipo}</small>
+                                                    </div>
+                                                `}
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultadosDiv.innerHTML = html;
+        }
+
+        // Mostrar error de fuentes
+        function mostrarError(mensaje) {
+            const resultadosDiv = document.getElementById('resultados');
+            resultadosDiv.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${mensaje}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Limpiar formulario de fuentes
+        function limpiarFormulario() {
+            document.getElementById('formBusqueda').reset();
+            document.getElementById('resultados').innerHTML = '';
+            document.getElementById('seccionACDC').style.display = 'none';
+            document.getElementById('seccionHoras').style.display = 'none';
+            cargarAplicaciones(); // Recargar aplicaciones sin filtro
+        }
+    </script>
+</body>
+</html>
