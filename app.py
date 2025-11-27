@@ -1,4 +1,4 @@
-# app_fuentes.py (actualizado)
+# app_fuentes.py (completo y corregido)
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import logging
@@ -22,16 +22,17 @@ app = Flask(__name__)
 # Ruta del archivo de baterías (en la misma carpeta del proyecto)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RUTA_BATERIAS = os.path.join(BASE_DIR, "DuracionBateriasAG.xlsx")
+RUTA_KITS_LED = os.path.join(BASE_DIR, "KITS ILUMINA-FUENTES.xlsx")
 HOJA_BATERIAS = "Baterias"
 
 @app.route('/')
 def index():
     """Página principal"""
-    return render_template('index.html')
+    return render_template('index2.html')
 
 @app.route('/buscar', methods=['POST'])
 def buscar_fuentes():
-    """Endpoint para buscar fuentes y (opcional) baterías para inversores"""
+    """Endpoint para buscar fuentes y (opcional) kits LED"""
     try:
         data = request.get_json()
         logger.info(f"Datos recibidos: {data}")
@@ -44,6 +45,7 @@ def buscar_fuentes():
         corriente_str = data.get('corriente', '').strip()
         potencia_str = data.get('potencia', '').strip()
         horas_autonomia_str = data.get('horas_autonomia', '').strip() if data.get('horas_autonomia') is not None else ''
+        tira_led = data.get('tira_led', '').strip()
 
         # Convertir valores numéricos
         voltaje = _try_float(voltaje_str) or 0
@@ -60,6 +62,35 @@ def buscar_fuentes():
                 tipo_salidas = "0"
         elif tipo_entrada_salida == "DC-AC":
             tipo_salidas = "0"  # Salida fija por defecto para DC-AC
+
+        # Si se especificó una tira LED, cargar sus parámetros
+        kit_info = None
+        if tira_led:
+            try:
+                df_tiras = pd.read_excel(RUTA_KITS_LED, sheet_name="Hoja 2")
+                df_tiras.columns = [col.strip() for col in df_tiras.columns]
+                
+                tira_info = df_tiras[df_tiras['Modelo'] == tira_led].iloc[0]
+                
+                # Sobrescribir parámetros con los de la tira LED
+                voltaje = float(tira_info.get('Voltaje_requerido_V', voltaje))
+                corriente = float(tira_info.get('Corriente_requerida_A', 0))
+                potencia = voltaje * corriente
+                
+                # Obtener información del conector y jack estándar
+                kit_info = {
+                    'modelo_tira': tira_led,
+                    'voltaje_tira': voltaje,
+                    'corriente_tira': corriente,
+                    'jack': str(tira_info.get('JACK', '')),
+                    'conector': str(tira_info.get('Conector', '')),
+                    'potencia_tira': potencia
+                }
+                
+                logger.info(f"Tira LED configurada: {kit_info}")
+                
+            except Exception as e:
+                logger.error(f"Error procesando tira LED: {e}")
 
         # Validaciones
         if not tipo_entrada_salida:
@@ -216,11 +247,66 @@ def buscar_fuentes():
 
             fuentes.append(fuente_data)
 
+        # Buscar kits recomendados si hay tira LED seleccionada - MOSTRAR TODOS LOS KITS
+        kits_recomendados = []
+        if tira_led:
+            try:
+                logger.info(f"Buscando kits para: {tira_led}")
+                
+                # Cargar Hoja 2 para compatibilidad
+                df_compatibilidad = pd.read_excel(RUTA_KITS_LED, sheet_name="Hoja 2")
+                df_compatibilidad.columns = [col.strip() for col in df_compatibilidad.columns]
+                
+                # Filtrar fuentes compatibles para esta tira LED
+                fuentes_compatibles = df_compatibilidad[df_compatibilidad['Modelo'] == tira_led]
+                
+                logger.info(f"Fuentes compatibles encontradas: {len(fuentes_compatibles)}")
+                
+                # MOSTRAR TODOS LOS KITS DISPONIBLES
+                for _, fuente_row in fuentes_compatibles.iterrows():
+                    if pd.notna(fuente_row.get('Fuente Compatible')):
+                        fuente_modelo = str(fuente_row['Fuente Compatible'])
+                        corriente_fuente = float(fuente_row.get('Corriente de la fuente (A)', 0))
+                        conector = str(fuente_row.get('Conector', '221-412'))
+                        jack = str(fuente_row.get('JACK', 'DC5.1-JACK'))
+                        cantidad_tiras = int(fuente_row.get('Cantidad de Tiras', 1))  # NUEVO: Obtener cantidad de tiras
+                        
+                        # Obtener información de la fuente desde el catálogo principal
+                        fuente_info_catalogo = None
+                        if not cat.empty and 'fuente' in cat.columns:
+                            fuente_match = cat[cat['fuente'].astype(str) == fuente_modelo]
+                            if not fuente_match.empty:
+                                fuente_info_catalogo = fuente_match.iloc[0]
+                        
+                        # Crear información del kit - VERSIÓN MEJORADA CON CANTIDAD DE TIRAS
+                        kit_data = {
+                            'nombre_kit': f"Kit {tira_led} + {fuente_modelo}",
+                            'fuente_compatible': fuente_modelo,
+                            'corriente_fuente': corriente_fuente,
+                            'conector_recomendado': conector,
+                            'jack_recomendado': jack,
+                            'cantidad_tiras': cantidad_tiras,  # NUEVO: Incluir cantidad de tiras
+                            'voltaje_fuente': str(fuente_info_catalogo.get('voltaje_v', '12V')) if fuente_info_catalogo is not None else '12V',
+                            'potencia_fuente': str(fuente_info_catalogo.get('potencia_w', f'{corriente_fuente * 12}W')) if fuente_info_catalogo is not None else f'{corriente_fuente * 12}W'
+                        }
+                        
+                        kits_recomendados.append(kit_data)
+                        logger.info(f"Kit creado: {kit_data['nombre_kit']} - Soporta {cantidad_tiras} tiras")
+                
+                logger.info(f"Kits finales para {tira_led}: {len(kits_recomendados)}")
+                
+            except Exception as e:
+                logger.error(f"Error buscando kits LED: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+
         return jsonify({
             'success': True,
             'resultados': fuentes,
             'total': len(fuentes),
-            'horas_autonomia': horas_autonomia
+            'horas_autonomia': horas_autonomia,
+            'tira_led_seleccionada': tira_led if tira_led else None,
+            'kits_recomendados': kits_recomendados
         })
 
     except Exception as e:
@@ -292,6 +378,104 @@ def obtener_aplicaciones_por_tipo(tipo_fuente):
         logger.error(f"Error obteniendo aplicaciones para {tipo_fuente}: {e}")
         return jsonify({'success': True, 'aplicaciones': []})
 
+@app.route('/tiras-led')
+def obtener_tiras_led():
+    """Obtener todas las tiras LED disponibles desde el Excel"""
+    try:
+        # Cargar el archivo Excel de kits de iluminación - HOJA 2
+        df_tiras = pd.read_excel(RUTA_KITS_LED, sheet_name="Hoja 2")
+        
+        # Limpiar y normalizar los datos
+        df_tiras.columns = [col.strip() for col in df_tiras.columns]
+        
+        # Filtrar solo filas que tienen modelo
+        df_tiras = df_tiras[df_tiras['Modelo'].notna()]
+        
+        # Agrupar por modelo de tira LED
+        modelos_unicos = df_tiras['Modelo'].dropna().unique()
+        
+        tiras = []
+        for modelo in modelos_unicos:
+            # Obtener la primera fila de cada modelo para información básica
+            tira_data = df_tiras[df_tiras['Modelo'] == modelo].iloc[0]
+            
+            # Manejar valores NaN
+            jack_val = tira_data.get('JACK', '')
+            conector_val = tira_data.get('Conector', '')
+            
+            if pd.isna(jack_val):
+                jack_val = ''
+            else:
+                jack_val = str(jack_val)
+                
+            if pd.isna(conector_val):
+                conector_val = ''
+            else:
+                conector_val = str(conector_val)
+            
+            tira_info = {
+                'modelo': str(modelo),
+                'voltaje': float(tira_data.get('Voltaje_requerido_V', 0)),
+                'corriente': float(tira_data.get('Corriente_requerida_A', 0)),
+                'jack': jack_val,
+                'conector': conector_val
+            }
+            tiras.append(tira_info)
+        
+        logger.info(f"Se cargaron {len(tiras)} modelos de tiras LED desde Hoja 2")
+        return jsonify({'success': True, 'tiras_led': tiras})
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo tiras LED: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/kit-led/<modelo_tira>')
+def obtener_kit_led(modelo_tira):
+    """Obtener información completa del kit para una tira LED específica"""
+    try:
+        # Cargar el archivo Excel - HOJA 2
+        df_tiras = pd.read_excel(RUTA_KITS_LED, sheet_name="Hoja 2")
+        
+        # Limpiar y normalizar los datos
+        df_tiras.columns = [col.strip() for col in df_tiras.columns]
+        
+        # Filtrar por modelo de tira LED
+        tiras_filtradas = df_tiras[df_tiras['Modelo'] == modelo_tira]
+        
+        if tiras_filtradas.empty:
+            return jsonify({'success': False, 'error': 'Modelo de tira LED no encontrado'})
+        
+        # Obtener información básica de la tira
+        tira_info = tiras_filtradas.iloc[0]
+        info_basica = {
+            'modelo': str(modelo_tira),
+            'voltaje': float(tira_info.get('Voltaje_requerido_V', 0)),
+            'corriente': float(tira_info.get('Corriente_requerida_A', 0)),
+            'jack': str(tira_info.get('JACK', '')),
+            'conector': str(tira_info.get('Conector', ''))
+        }
+        
+        # Obtener fuentes compatibles
+        fuentes_compatibles = []
+        for _, tira in tiras_filtradas.iterrows():
+            if pd.notna(tira.get('Fuente Compatible')):
+                fuente_info = {
+                    'modelo_fuente': str(tira.get('Fuente Compatible', '')),
+                    'corriente_fuente': float(tira.get('Corriente de la fuente (A)', 0)),
+                    'max_tiras': int(tira.get('Cantidad de Tiras', 1))
+                }
+                fuentes_compatibles.append(fuente_info)
+        
+        return jsonify({
+            'success': True, 
+            'tira_led': info_basica,
+            'fuentes_compatibles': fuentes_compatibles
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo kit LED: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/debug')
 def debug():
     """Endpoint de debug"""
@@ -305,6 +489,8 @@ def debug():
             'columnas': cat.columns.tolist() if not cat.empty else [],
             'ruta_excel': RUTA_EXCEL,
             'ruta_baterias': RUTA_BATERIAS,
+            'ruta_kits_led': RUTA_KITS_LED,
+            'archivo_kits_existe': os.path.exists(RUTA_KITS_LED),
         }
         
         return jsonify(info)
