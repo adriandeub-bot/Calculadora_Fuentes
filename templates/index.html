@@ -31,6 +31,9 @@
         .resultado-item {
             border-left: 4px solid #0d6efd;
         }
+        .kit-item {
+            border-left: 4px solid #198754;
+        }
         .battery-small {
             border-left: 4px solid #198754;
             padding-left: 0.75rem;
@@ -50,6 +53,9 @@
             border-top: 3px solid #dee2e6;
             margin: 3rem 0;
             padding-top: 2rem;
+        }
+        .kit-alert {
+            border-left: 4px solid #198754;
         }
     </style>
 </head>
@@ -172,6 +178,52 @@
                                 </div>
                             </div>
 
+                            <!-- Sección Tiras LED -->
+                            <div id="seccionTirasLED" class="param-section" style="display:none;">
+                                <h6><i class="fas fa-lightbulb me-2"></i>Configuración para Iluminación LED</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-12">
+                                        <label for="tira_led" class="form-label">Seleccionar Tira LED</label>
+                                        <select class="form-select" id="tira_led" name="tira_led">
+                                            <option value="">No especificar tira LED</option>
+                                            <!-- Las opciones se cargarán dinámicamente -->
+                                        </select>
+                                        <small class="text-muted">Seleccione un modelo específico de tira LED para ver kits compatibles</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Información de la tira LED seleccionada -->
+                                <div id="infoTiraLED" class="mt-3 p-3 bg-light rounded" style="display:none;">
+                                    <h6>Información de la Tira LED</h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">Modelo:</small>
+                                            <p class="mb-1"><strong id="infoModelo">-</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Voltaje:</small>
+                                            <p class="mb-1"><strong id="infoVoltaje">-</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Corriente:</small>
+                                            <p class="mb-1"><strong id="infoCorriente">-</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Potencia:</small>
+                                            <p class="mb-1"><strong id="infoPotencia">-</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Conector estándar:</small>
+                                            <p class="mb-1"><strong id="infoConector">-</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Jack estándar:</small>
+                                            <p class="mb-1"><strong id="infoJack">-</strong></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Botones -->
                             <div class="row mt-4">
                                 <div class="col-12 d-flex gap-2">
@@ -203,6 +255,10 @@
         <div id="resultados" class="row mt-4">
             <!-- Los resultados se insertan aquí dinámicamente -->
         </div>
+
+            <!-- Kits Recomendados -->
+    <div id="kitsRecomendados" class="row mt-4" style="display: none;">
+        <!-- Los kits recomendados se insertan aquí dinámicamente -->
     </div>
 
     <!-- Bootstrap JS -->
@@ -222,19 +278,23 @@
             document.getElementById('tipo_entrada_salida').addEventListener('change', function() {
                 const seccionACDC = document.getElementById('seccionACDC');
                 const seccionHoras = document.getElementById('seccionHoras');
+                const seccionTirasLED = document.getElementById('seccionTirasLED');
                 const tipoSeleccionado = this.value;
                 
                 if (tipoSeleccionado === 'AC-DC') {
                     seccionACDC.style.display = 'block';
                     seccionHoras.style.display = 'none';
+                    seccionTirasLED.style.display = 'none';
                 } else if (tipoSeleccionado === 'DC-AC') {
                     seccionACDC.style.display = 'none';
                     document.getElementById('salida_variable').value = '';
                     seccionHoras.style.display = 'block';
+                    seccionTirasLED.style.display = 'none';
                 } else {
                     seccionACDC.style.display = 'none';
                     document.getElementById('salida_variable').value = '';
                     seccionHoras.style.display = 'none';
+                    seccionTirasLED.style.display = 'none';
                 }
                 
                 if (tipoSeleccionado) {
@@ -251,6 +311,9 @@
                     cargarAplicacionesPorTipo(tipoSeleccionado);
                 }
             });
+
+            // Configurar eventos para tiras LED
+            configurarEventosTirasLED();
 
         }
 
@@ -324,21 +387,105 @@
             }
         }
 
-        // Cálculo automático entre parámetros - VERSIÓN CORREGIDA
+        // Cargar tiras LED disponibles
+        async function cargarTirasLED() {
+            try {
+                const response = await fetch('/tiras-led');
+                const data = await response.json();
+                
+                const select = document.getElementById('tira_led');
+                select.innerHTML = '<option value="">No especificar tira LED</option>';
+                
+                if (data.success && data.tiras_led.length > 0) {
+                    data.tiras_led.forEach(tira => {
+                        const option = document.createElement('option');
+                        option.value = tira.modelo;
+                        option.textContent = `${tira.modelo} - ${tira.voltaje}V - ${tira.corriente}A`;
+                        option.dataset.info = JSON.stringify(tira);
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error cargando tiras LED:', error);
+            }
+        }
+
+        // Configurar eventos para tiras LED
+        function configurarEventosTirasLED() {
+            const aplicacionSelect = document.getElementById('aplicacion');
+            const seccionTirasLED = document.getElementById('seccionTirasLED');
+            const tiraLEDSelect = document.getElementById('tira_led');
+            const infoTiraLED = document.getElementById('infoTiraLED');
+            
+            // Mostrar sección cuando se selecciona aplicación de iluminación
+            aplicacionSelect.addEventListener('change', function() {
+                const aplicacionSeleccionada = this.value.toLowerCase();
+                if (aplicacionSeleccionada.includes('iluminación') || aplicacionSeleccionada.includes('iluminacion') || 
+                    aplicacionSeleccionada.includes('led') || aplicacionSeleccionada.includes('luz')) {
+                    seccionTirasLED.style.display = 'block';
+                    cargarTirasLED();
+                } else {
+                    seccionTirasLED.style.display = 'none';
+                    tiraLEDSelect.value = '';
+                    infoTiraLED.style.display = 'none';
+                }
+            });
+            
+            // Mostrar información cuando se selecciona una tira LED
+            tiraLEDSelect.addEventListener('change', function() {
+                if (this.value) {
+                    const tiraInfo = JSON.parse(this.selectedOptions[0].dataset.info);
+                    mostrarInfoTiraLED(tiraInfo);
+                    
+                    // AUTO-RELLENAR PARÁMETROS BASADOS EN LA TIRA LED
+                    calcularParametrosTiraLED(tiraInfo);
+                } else {
+                    infoTiraLED.style.display = 'none';
+                }
+            });
+
+            // Configurar cálculo automático entre campos numéricos
+            document.getElementById('voltaje').addEventListener('input', calcularAutomatico);
+            document.getElementById('corriente').addEventListener('input', calcularAutomatico);
+        }
+
+        // Mostrar información de la tira LED seleccionada
+        function mostrarInfoTiraLED(tiraInfo) {
+            document.getElementById('infoModelo').textContent = tiraInfo.modelo;
+            document.getElementById('infoVoltaje').textContent = tiraInfo.voltaje + 'V';
+            document.getElementById('infoCorriente').textContent = tiraInfo.corriente + 'A';
+            document.getElementById('infoPotencia').textContent = (tiraInfo.voltaje * tiraInfo.corriente).toFixed(1) + 'W';
+            document.getElementById('infoConector').textContent = tiraInfo.conector || 'No especificado';
+            document.getElementById('infoJack').textContent = tiraInfo.jack || 'No especificado';
+            document.getElementById('infoTiraLED').style.display = 'block';
+        }
+
+        // Calcular parámetros automáticamente basados en la tira LED
+        function calcularParametrosTiraLED(tiraInfo) {
+            const voltajeTotal = tiraInfo.voltaje;
+            const corrienteTotal = tiraInfo.corriente;
+            
+            // COLOCAR AUTOMÁTICAMENTE VOLTAJE Y CORRIENTE EN LOS PARÁMETROS DE BÚSQUEDA
+            document.getElementById('voltaje').value = voltajeTotal;
+            document.getElementById('corriente').value = corrienteTotal.toFixed(2);
+            
+            console.log(`Tira LED: ${tiraInfo.modelo}, V: ${voltajeTotal}V, A: ${corrienteTotal}A, W: ${potenciaTotal}W`);
+        }
+
+        // Cálculo automático entre parámetros
         function calcularAutomatico(event) {
             // Pequeña pausa para asegurar que los valores se han actualizado
             setTimeout(() => {
                 const voltaje = parseFloat(document.getElementById('voltaje').value) || 0;
                 const corriente = parseFloat(document.getElementById('corriente').value) || 0;
-                const potencia = parseFloat(document.getElementById('potencia').value) || 0;
                 
-                console.log(`Valores: V=${voltaje}, A=${corriente}, W=${potencia}`); // Para debug
+                console.log(`Valores: V=${voltaje}, A=${corriente}, W=${potencia}`);
 
                 // Solo calcular si hay exactamente 2 parámetros llenos y el tercero vacío
                 const parametrosLlenos = [voltaje, corriente, potencia].filter(val => val > 0).length;
-                const potenciaVacia = document.getElementById('potencia').value === '';
                 const corrienteVacia = document.getElementById('corriente').value === '';
                 const voltajeVacio = document.getElementById('voltaje').value === '';
+                const potenciaVacia = document.getElementById('potencia').value === '';
 
                 if (parametrosLlenos === 2) {
                     // Caso 1: Voltaje y Corriente llenos, Potencia vacía
@@ -370,6 +517,15 @@
             const formData = new FormData(this);
             const data = Object.fromEntries(formData);
             
+            // Incluir datos de tiras LED si están disponibles
+            const tiraLEDSelect = document.getElementById('tira_led');
+            if (tiraLEDSelect.value) {
+                data.tira_led = tiraLEDSelect.value;
+                console.log("Tira LED seleccionada:", data.tira_led);
+            }
+            
+            console.log("Datos enviados:", data);
+            
             // Validación básica
             if (!data.tipo_entrada_salida) {
                 alert('Por favor seleccione el tipo de entrada/salida');
@@ -384,6 +540,8 @@
             // Mostrar loading
             document.getElementById('loading').style.display = 'block';
             document.getElementById('resultados').innerHTML = '';
+            document.getElementById('kitsRecomendados').innerHTML = '';
+            document.getElementById('kitsRecomendados').style.display = 'none';
             
             try {
                 const response = await fetch('/buscar', {
@@ -408,6 +566,12 @@
         // Mostrar resultados de fuentes
         function mostrarResultados(result) {
             const resultadosDiv = document.getElementById('resultados');
+            const kitsDiv = document.getElementById('kitsRecomendados');
+            
+            // Limpiar secciones primero
+            resultadosDiv.innerHTML = '';
+            kitsDiv.innerHTML = '';
+            kitsDiv.style.display = 'none';
             
             if (!result.success) {
                 resultadosDiv.innerHTML = `
@@ -421,6 +585,9 @@
                 return;
             }
             
+            console.log("Resultado completo:", result);
+            
+            // Mostrar fuentes normales
             if (result.total === 0) {
                 resultadosDiv.innerHTML = `
                     <div class="col-12">
@@ -431,97 +598,165 @@
                         </div>
                     </div>
                 `;
-                return;
+            } else {
+                let html = `
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>
+                                <i class="fas fa-list me-2"></i>
+                                Fuentes Encontradas (${result.total})
+                            </h4>
+                        </div>
+                    </div>
+                `;
+                
+                result.resultados.forEach((fuente, index) => {
+                    html += `
+                        <div class="col-lg-6 col-xl-4">
+                            <div class="card resultado-item h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fa-solid fa-plug-circle-bolt"></i>
+                                        ${fuente.modelo}
+                                    </h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">${fuente.tipo_entrada_salida}</h6>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-12 mb-2">
+                                            <small class="text-muted">Voltaje:</small>
+                                            <p class="mb-1"><strong>${fuente.voltaje}</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Corriente</small>
+                                            <p class="mb-1"><strong>${fuente.corriente}${typeof fuente.corriente === 'number' ? 'A' : ''}</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Potencia</small>
+                                            <p class="mb-1"><strong>${fuente.potencia}${typeof fuente.potencia === 'number' ? 'W' : ''}</strong></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-2">
+                                        <small class="text-muted">Aplicaciones:</small>
+                                        <p class="small mb-0">${fuente.aplicaciones}</p>
+                                    </div>
+
+                                    <!-- Baterías sugeridas (si existen) -->
+                                    ${fuente.baterias && fuente.baterias.length > 0 ? `
+                                        <div class="mt-3">
+                                            <small class="text-muted">Baterías sugeridas (para ${result.horas_autonomia || '—'} h):</small>
+                                            <div class="mt-2">
+                                                ${fuente.baterias.map(b => `
+                                                    <div class="battery-small">
+                                                        <strong>${b.modelo}</strong> — ${b.tipo} — ${b.voltaje}V — ${b.corriente_ah}Ah
+                                                        <br><small class="text-muted">Capacidad: ${b.capacidad_wh}Wh | Autonomía: <strong>${b.autonomia_horas} h</strong></small>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultadosDiv.innerHTML = html;
             }
+
+            // Mostrar kits recomendados si hay tira LED seleccionada
+            console.log("Kits recomendados:", result.kits_recomendados);
+            if (result.tira_led_seleccionada && result.kits_recomendados && result.kits_recomendados.length > 0) {
+            console.log("Mostrando kits recomendados");
             
-            let html = `
+            let kitsHtml = `
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4>
-                            <i class="fas fa-list me-2"></i>
-                            Resultados (${result.total} fuentes encontradas)
+                    <div class="section-divider">
+                        <h4 class="text-success">
+                            <i class="fas fa-box me-2"></i>
+                            Kits Recomendados para "${result.tira_led_seleccionada}"
                         </h4>
+                        <p class="text-muted">Kits plug & play preconfigurados compatibles</p>
                     </div>
                 </div>
             `;
             
-            result.resultados.forEach((fuente, index) => {
-                html += `
+            // MOSTRAR TODOS LOS KITS DISPONIBLES
+            result.kits_recomendados.forEach((kit, index) => {
+                console.log("Procesando kit:", kit);
+                
+                kitsHtml += `
                     <div class="col-lg-6 col-xl-4">
-                        <div class="card resultado-item h-100">
+                        <div class="card kit-item h-100">
                             <div class="card-body">
-                                <h5 class="card-title">
-                                    <i class="fa-solid fa-plug-circle-bolt"></i>
-                                    ${fuente.modelo}
+                                <h5 class="card-title text-success">
+                                    <i class="fas fa-puzzle-piece me-2"></i>
+                                    ${kit.nombre_kit || `Kit ${result.tira_led_seleccionada}`}
                                 </h5>
-                                <h6 class="card-subtitle mb-2 text-muted">${fuente.tipo_entrada_salida}</h6>
                                 
                                 <div class="row mt-3">
-                                    <div class="col-12 mb-2">
+                                    <div class="col-12">
+                                        <small class="text-muted">Fuente de alimentación:</small>
+                                        <p class="mb-1"><strong>${kit.fuente_compatible || 'No especificada'}</strong></p>
+                                    </div>
+                                    <div class="col-6">
                                         <small class="text-muted">Voltaje:</small>
-                                        <p class="mb-1"><strong>${fuente.voltaje}</strong></p>
+                                        <p class="mb-1"><strong>${kit.voltaje_fuente || '12V'}</strong></p>
                                     </div>
                                     <div class="col-6">
-                                        <small class="text-muted">Corriente</small>
-                                        <p class="mb-1"><strong>${fuente.corriente}${typeof fuente.corriente === 'number' ? 'A' : ''}</strong></p>
+                                        <small class="text-muted">Corriente:</small>
+                                        <p class="mb-1"><strong>${kit.corriente_fuente || 0}A</strong></p>
                                     </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">Potencia</small>
-                                        <p class="mb-1"><strong>${fuente.potencia}${typeof fuente.potencia === 'number' ? 'W' : ''}</strong></p>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-2">
-                                    <small class="text-muted">Aplicaciones:</small>
-                                    <p class="small mb-0">${fuente.aplicaciones}</p>
                                 </div>
 
-                                <!-- Baterías sugeridas (si existen) -->
-                                ${fuente.baterias && fuente.baterias.length > 0 ? `
-                                    <div class="mt-3">
-                                        <small class="text-muted">Baterías sugeridas (para ${result.horas_autonomia || '—'} h):</small>
-                                        <div class="mt-2">
-                                            ${fuente.baterias.map(b => `
-                                                <div class="battery-small">
-                                                    <strong>${b.modelo}</strong> — ${b.tipo} — ${b.voltaje}V — ${b.corriente_ah}Ah
-                                                    <br><small class="text-muted">Capacidad: ${b.capacidad_wh}Wh | Autonomía: <strong>${b.autonomia_horas} h</strong></small>
+                                <!-- NUEVA SECCIÓN: Información de capacidad -->
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="alert py-2 mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div>
+                                                    <small>Soporta hasta ${kit.cantidad_tiras || 1} unidad(es) de ${result.tira_led_seleccionada}</small>
                                                 </div>
-                                            `).join('')}
+                                            </div>
                                         </div>
                                     </div>
-                                ` : ''}
-                                <!-- Arreglos de baterías (si existen) -->
-                                ${fuente.arreglos_baterias && fuente.arreglos_baterias.length > 0 ? `
-                                    <div class="mt-3">
-                                        <small class="text-muted">Arreglos de baterías:</small>
-                                        <div class="mt-2">
-                                            ${fuente.arreglos_baterias.map(arr => `
-                                                ${arr.total_baterias > 0 ? `
-                                                    <div class="battery-small" style="border-left-color: #ffc107;">
-                                                        <strong>${arr.modelo}</strong> — ${arr.tipo} — ${arr.voltaje_bateria}V — ${arr.capacidad_ah}Ah
-                                                        <br><small class="text-muted">
-                                                            Arreglo: ${arr.baterias_serie}S × ${arr.conjuntos_paralelo}P 
-                                                            | Total: ${arr.total_baterias} baterías
-                                                            | Voltaje: ${arr.voltaje_sistema}V
-                                                            | Autonomía: <strong>${arr.autonomia_horas} h</strong>
-                                                        </small>
-                                                    </div>
-                                                ` : `
-                                                    <div class="battery-small" style="border-left-color: #6c757d;">
-                                                        <small class="text-muted">${arr.tipo}</small>
-                                                    </div>
-                                                `}
-                                            `).join('')}
-                                        </div>
+                                </div>
+
+                                <div class="row mt-3">
+                                    <div class="col-6">
+                                        <small class="text-muted">Conector incluido:</small>
+                                        <p class="mb-1"><strong>${kit.conector_recomendado || '221-412'}</strong></p>
                                     </div>
-                                ` : ''}
+                                    <div class="col-6">
+                                        <small class="text-muted">Jack incluido:</small>
+                                        <p class="mb-1"><strong>${kit.jack_recomendado || 'DC5.1-JACK'}</strong></p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             });
             
-            resultadosDiv.innerHTML = html;
+            kitsDiv.innerHTML = kitsHtml;
+            kitsDiv.style.display = 'block';
+            
+            console.log("Kits HTML generado");
+
+            } else if (result.tira_led_seleccionada) {
+                console.log("No hay kits recomendados para:", result.tira_led_seleccionada);
+                // Mostrar mensaje de que no hay kits específicos
+                kitsDiv.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle me-2"></i>No hay kits preconfigurados específicos</h5>
+                            <p class="mb-0">Para la tira LED "${result.tira_led_seleccionada}" no existen kits preconfigurados en el catálogo. 
+                            Use las fuentes recomendadas en la sección superior junto con los conectores estándar.</p>
+                        </div>
+                    </div>
+                `;
+                kitsDiv.style.display = 'block';
+            }
         }
 
         // Mostrar error de fuentes
@@ -541,8 +776,12 @@
         function limpiarFormulario() {
             document.getElementById('formBusqueda').reset();
             document.getElementById('resultados').innerHTML = '';
+            document.getElementById('kitsRecomendados').innerHTML = '';
+            document.getElementById('kitsRecomendados').style.display = 'none';
             document.getElementById('seccionACDC').style.display = 'none';
             document.getElementById('seccionHoras').style.display = 'none';
+            document.getElementById('seccionTirasLED').style.display = 'none';
+            document.getElementById('infoTiraLED').style.display = 'none';
             cargarAplicaciones(); // Recargar aplicaciones sin filtro
         }
     </script>
