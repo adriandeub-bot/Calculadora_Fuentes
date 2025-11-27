@@ -28,7 +28,7 @@ HOJA_BATERIAS = "Baterias"
 @app.route('/')
 def index():
     """Página principal"""
-    return render_template('index2.html')
+    return render_template('index.html')
 
 @app.route('/buscar', methods=['POST'])
 def buscar_fuentes():
