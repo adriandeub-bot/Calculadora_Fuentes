@@ -667,83 +667,90 @@
             // Mostrar kits recomendados si hay tira LED seleccionada
             console.log("Kits recomendados:", result.kits_recomendados);
             if (result.tira_led_seleccionada && result.kits_recomendados && result.kits_recomendados.length > 0) {
-            console.log("Mostrando kits recomendados");
-            
-            let kitsHtml = `
-                <div class="col-12">
-                    <div class="section-divider">
-                        <h4 class="text-success">
-                            <i class="fas fa-box me-2"></i>
-                            Kits Recomendados para "${result.tira_led_seleccionada}"
-                        </h4>
-                        <p class="text-muted">Kits plug & play preconfigurados compatibles</p>
-                    </div>
-                </div>
-            `;
-            
-            // MOSTRAR TODOS LOS KITS DISPONIBLES
-            result.kits_recomendados.forEach((kit, index) => {
-                console.log("Procesando kit:", kit);
+                console.log("Mostrando kits recomendados");
                 
-                kitsHtml += `
-                    <div class="col-lg-6 col-xl-4">
-                        <div class="card kit-item h-100">
-                            <div class="card-body">
-                                <h5 class="card-title text-success">
-                                    <i class="fas fa-puzzle-piece me-2"></i>
-                                    ${kit.nombre_kit || `Kit ${result.tira_led_seleccionada}`}
-                                </h5>
-                                
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <small class="text-muted">Fuente de alimentación:</small>
-                                        <p class="mb-1"><strong>${kit.fuente_compatible || 'No especificada'}</strong></p>
+                let kitsHtml = `
+                    <div class="col-12">
+                        <div class="section-divider">
+                            <h4 class="text-success">
+                                <i class="fas fa-box me-2"></i>
+                                Kits Recomendados para "${result.tira_led_seleccionada}"
+                            </h4>
+                            <p class="text-muted">Kits plug & play preconfigurados compatibles</p>
+                        </div>
+                    </div>
+                `;
+                
+                // AGREGAR CONTENEDOR DE FILA PRINCIPAL
+                kitsHtml += `<div class="row">`;
+                
+                // MOSTRAR TODOS LOS KITS DISPONIBLES
+                result.kits_recomendados.forEach((kit, index) => {
+                    console.log("Procesando kit:", kit);
+                    
+                    kitsHtml += `
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card kit-item h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title text-success">
+                                        <i class="fas fa-puzzle-piece me-2"></i>
+                                        ${kit.nombre_kit || `Kit ${result.tira_led_seleccionada}`}
+                                    </h5>
+                                    
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <small class="text-muted">Fuente de alimentación:</small>
+                                            <p class="mb-1"><strong>${kit.fuente_compatible || 'No especificada'}</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Voltaje:</small>
+                                            <p class="mb-1"><strong>${kit.voltaje_fuente || '12V'}</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Corriente:</small>
+                                            <p class="mb-1"><strong>${kit.corriente_fuente || 0}A</strong></p>
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">Voltaje:</small>
-                                        <p class="mb-1"><strong>${kit.voltaje_fuente || '12V'}</strong></p>
-                                    </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">Corriente:</small>
-                                        <p class="mb-1"><strong>${kit.corriente_fuente || 0}A</strong></p>
-                                    </div>
-                                </div>
 
-                                <!-- NUEVA SECCIÓN: Información de capacidad -->
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <div class="alert py-2 mb-2">
-                                            <div class="d-flex align-items-center">
+                                    <!-- SECCIÓN: Información de capacidad -->
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <div class="py-2 mb-2 text-start">
                                                 <div>
-                                                    <small>Soporta hasta ${kit.cantidad_tiras || 1} unidad(es) de ${result.tira_led_seleccionada}</small>
+                                                    <div class="text-start w-100">
+                                                        <small>Soporta hasta ${kit.cantidad_tiras || 1} unidad(es) de ${result.tira_led_seleccionada}</small>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div class="row mt-3">
-                                    <div class="col-6">
-                                        <small class="text-muted">Conector incluido:</small>
-                                        <p class="mb-1"><strong>${kit.conector_recomendado || '221-412'}</strong></p>
-                                    </div>
-                                    <div class="col-6">
-                                        <small class="text-muted">Jack incluido:</small>
-                                        <p class="mb-1"><strong>${kit.jack_recomendado || 'DC5.1-JACK'}</strong></p>
+                                    <div class="row mt-3">
+                                        <div class="col-6">
+                                            <small class="text-muted">Conector incluido:</small>
+                                            <p class="mb-1"><strong>${kit.conector_recomendado || '221-412'}</strong></p>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Jack incluido:</small>
+                                            <p class="mb-1"><strong>${kit.jack_recomendado || 'DC5.1-JACK'}</strong></p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
-            });
-            
-            kitsDiv.innerHTML = kitsHtml;
-            kitsDiv.style.display = 'block';
-            
-            console.log("Kits HTML generado");
+                    `;
+                });
+                
+                // CERRAR EL CONTENEDOR DE FILA
+                kitsHtml += `</div>`;
+                
+                kitsDiv.innerHTML = kitsHtml;
+                kitsDiv.style.display = 'block';
+                
+                console.log("Kits HTML generado");
+            }
 
-            } else if (result.tira_led_seleccionada) {
+            else if (result.tira_led_seleccionada) {
                 console.log("No hay kits recomendados para:", result.tira_led_seleccionada);
                 // Mostrar mensaje de que no hay kits específicos
                 kitsDiv.innerHTML = `
